@@ -1,75 +1,74 @@
-import json
-import os
+from core.evolucion import cargar_conciencia, guardar_conciencia
 from datetime import datetime
-from difflib import SequenceMatcher
-import pprint  # Para convertir dicts en texto formateado
-
-RUTA_CONSCIENCIA = "data/conciencia_default.json"
-
-def cargar_conciencia():
-    if not os.path.exists(RUTA_CONSCIENCIA):
-        return {}
-    try:
-        with open(RUTA_CONSCIENCIA, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"⚠️ Error al cargar conciencia: {e}")
-        return {}
-
-def guardar_conciencia(data):
-    os.makedirs(os.path.dirname(RUTA_CONSCIENCIA), exist_ok=True)
-    with open(RUTA_CONSCIENCIA, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def registrar_evento(tipo, entrada=None, salida=None, nivel="info"):
-    conciencia = cargar_conciencia()
-    evento = {
-        "timestamp": datetime.now().isoformat(),
-        "tipo": tipo,
-        "nivel": nivel,
-        "entrada": entrada,
-        "salida": salida
-    }
-    conciencia.setdefault("registro", []).append(evento)
-    return conciencia  # Devolverla para que se pueda seguir usando
+import uuid
 
 def registrar_en_conciencia(tipo, entrada, salida):
-    registrar_interaccion(tipo, entrada, salida)
-
-def registrar_interaccion(tipo, entrada, salida):
     conciencia = cargar_conciencia()
-
-    interaccion = {
-        "timestamp": datetime.now().isoformat(),
+    nueva_entrada = {
+        "id": str(uuid.uuid4()),
         "tipo": tipo,
         "entrada": entrada,
-        "salida": salida
+        "salida": salida,
+        "timestamp": datetime.utcnow().isoformat(),
+        "peso_utilidad": 1.0
     }
-    conciencia.setdefault("interacciones", []).append(interaccion)
-
-    # También registrar como evento general
-    conciencia = registrar_evento(tipo=tipo, entrada=entrada, salida=salida)
-
+    conciencia.setdefault("memoria", []).append(nueva_entrada)
     guardar_conciencia(conciencia)
 
-def buscar_en_conciencia(mensaje_usuario, umbral=0.85):
+def registrar_evento(tipo, entrada, salida, nivel="info"):
     conciencia = cargar_conciencia()
-    historial = conciencia.get("interacciones", [])
+    evento = {
+        "id": str(uuid.uuid4()),
+        "tipo": tipo,
+        "entrada": entrada,
+        "salida": salida,
+        "nivel": nivel,
+        "timestamp": datetime.utcnow().isoformat(),
+        "peso_utilidad": 1.0
+    }
+    conciencia.setdefault("eventos", []).append(evento)
+    guardar_conciencia(conciencia)
 
-    if not isinstance(mensaje_usuario, str):
-        mensaje_usuario = pprint.pformat(mensaje_usuario)
+def buscar_en_conciencia(mensaje):
+    conciencia = cargar_conciencia()
+    resultados = []
+    for item in conciencia.get("memoria", []):
+        if mensaje.lower() in str(item.get("entrada", "")).lower():
+            resultados.append(item)
+    return resultados
 
-    for interaccion in reversed(historial):
-        entrada_prev = interaccion.get("entrada", "")
+def actualizar_peso_fragmentos_memoria(fragmentos, exito=True):
+    conciencia = cargar_conciencia()
+    memoria = conciencia.get("memoria", [])
+    ids_actualizados = set()
 
-        if not isinstance(entrada_prev, str):
-            entrada_prev = pprint.pformat(entrada_prev)
+    for frag in fragmentos:
+        frag_id = frag.get("id")
+        if not frag_id:
+            continue
+        for registro in memoria:
+            if registro.get("id") == frag_id:
+                peso_actual = registro.get("peso_utilidad", 1.0)
+                if exito:
+                    nuevo_peso = min(peso_actual + 0.3, 5.0)
+                else:
+                    nuevo_peso = max(peso_actual - 0.3, 0.1)
+                registro["peso_utilidad"] = round(nuevo_peso, 2)
+                ids_actualizados.add(frag_id)
+                break
 
-        similitud = SequenceMatcher(None, mensaje_usuario.lower(), entrada_prev.lower()).ratio()
-        if similitud >= umbral:
-            salida = interaccion.get("salida")
-            registrar_en_conciencia("busqueda_textual", mensaje_usuario, f"Coincidencia con: {entrada_prev}")
-            return salida
+    if ids_actualizados:
+        guardar_conciencia(conciencia)
 
-    registrar_en_conciencia("busqueda_textual", mensaje_usuario, "❌ Sin coincidencias sobre el umbral")
-    return None
+def limpiar_memoria_por_peso(umbral_minimo=0.2):
+    conciencia = cargar_conciencia()
+    memoria = conciencia.get("memoria", [])
+    memoria_filtrada = [m for m in memoria if m.get("peso_utilidad", 1.0) >= umbral_minimo]
+    if len(memoria_filtrada) < len(memoria):
+        conciencia["memoria"] = memoria_filtrada
+        guardar_conciencia(conciencia)
+def registrar_en_conciencia(tipo, entrada=None, salida=None, nivel="info"):
+    """
+    Alias a registrar_evento para compatibilidad con autoevaluacion.py.
+    """
+    return registrar_evento(tipo, entrada, salida, nivel)

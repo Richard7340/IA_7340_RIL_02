@@ -2,7 +2,6 @@ import json
 import os
 from datetime import datetime
 from urllib.parse import urlparse
-from core.memoria import registrar_evento  # Asegúrate de tenerlo en memoria.py
 
 RUTA_CONSCIENCIA = "data/conciencia_default.json"
 RUTA_AUTOCODIGO = "data/codigo_autogenerado.py"
@@ -47,6 +46,7 @@ def guardar_conciencia(data):
     with open(RUTA_CONSCIENCIA, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+
 # --------------------
 # Control total
 # --------------------
@@ -64,6 +64,7 @@ def estado_evolucion_activa():
     conciencia = cargar_conciencia()
     return conciencia.get("control_total", False)
 
+
 # --------------------
 # Código generado
 # --------------------
@@ -80,7 +81,14 @@ def guardar_codigo_autogenerado(codigo, fuente="IA"):
         f.write(contenido)
     return RUTA_AUTOCODIGO
 
+
+# --------------------
+# Registrar autoprogramación
+# --------------------
 def registrar_autoprogramacion(entrada, salida):
+    # Import dinámico para romper ciclo
+    from core.memoria import registrar_evento
+
     conciencia = cargar_conciencia()
     conciencia.setdefault("registro", [])
     conciencia.setdefault("autoprogramacion", [])
@@ -101,12 +109,15 @@ def registrar_autoprogramacion(entrada, salida):
     guardar_conciencia(conciencia)
     return True
 
+
 # --------------------
 # Evolución de la conciencia
 # --------------------
 def evolucionar_conciencia(entrada, salida):
-    conciencia = cargar_conciencia()
+    # Import dinámico para romper ciclo
+    from core.memoria import registrar_evento, registrar_interaccion
 
+    conciencia = cargar_conciencia()
     conciencia.setdefault("memoria", {}).setdefault("interacciones", [])
     conciencia.setdefault("habilidades", {})
     conciencia.setdefault("interacciones", [])
@@ -134,13 +145,18 @@ def evolucionar_conciencia(entrada, salida):
     tokens = len(entrada.split()) + len(salida.split())
     conciencia["memoria"]["tokens_usados"] += tokens
 
-    registrar_autoprogramacion(entrada, salida)
+    # Registrar la interacción en memoria
+    registrar_interaccion("evolucion_interaccion", entrada, salida)
     guardar_conciencia(conciencia)
+
 
 # --------------------
 # Actualización de memoria del sistema
 # --------------------
 def actualizar_memoria_sistema(nueva_info: dict):
+    # Import dinámico para romper ciclo
+    from core.memoria import registrar_evento
+
     conciencia = cargar_conciencia()
     memoria_actual = conciencia.setdefault("memoria", {})
     cambios_detectados = False
@@ -161,6 +177,18 @@ def actualizar_memoria_sistema(nueva_info: dict):
         return True
     return False
 
+def marcar_memoria_por_peso(peso: float):
+    """
+    Marca en la conciencia cuál fue el peso con el que se priorizó la memoria.
+    """
+    conciencia = cargar_conciencia()
+    # Supongamos que guardas un campo en memoria:
+    conciencia.setdefault("memoria", {})["ultimo_peso"] = peso
+    guardar_conciencia(conciencia)
+    return True
+
+from urllib.parse import urlparse
+
 # --------------------
 # Limpieza de URLs (evita escapes incorrectos)
 # --------------------
@@ -169,3 +197,43 @@ def limpiar_url(url: str) -> str:
     if not urlparse(url).scheme:
         raise ValueError("❌ URL inválida o sin esquema (http/https)")
     return url
+
+def asegurar_integridad_memoria() -> bool:
+    """
+    Recarga y valida la estructura de la conciencia, garantizando
+    que la sección 'memoria' existe y tiene los campos esperados.
+    """
+    conciencia = cargar_conciencia()
+    # Asegura que existan las claves básicas
+    memoria = conciencia.setdefault("memoria", {})
+    memoria.setdefault("interacciones", [])
+    memoria.setdefault("tokens_usados", 0)
+    # (aquí podrías hacer más validaciones o limpiezas)
+    guardar_conciencia(conciencia)
+    return True
+
+def actualizar_peso_fragmentos_memoria(fragmentos: list, exito: bool) -> None:
+    """
+    Ajusta el peso de cada fragmento en memoria según si la acción global
+    fue exitosa o no. Fragmentos es una lista de dicts con clave 'peso'.
+    """
+    conciencia = cargar_conciencia()
+    memoria = conciencia.setdefault("memoria", {})
+    # Suponemos que en memoria guardas los fragmentos actuales:
+    memoria_fragmentos = memoria.setdefault("fragmentos", [])
+
+    # Actualiza el peso en la propia lista de fragmentos activos
+    for frag in fragmentos:
+        peso_actual = frag.get("peso", 0.5)
+        # Si tuvo éxito, aumentamos un 10%, si falló, reducimos un 5%
+        nuevo_peso = peso_actual * (1.1 if exito else 0.95)
+        # Lo capamos entre 0 y 1
+        frag["peso"] = max(0.0, min(1.0, nuevo_peso))
+        # También querrás reflejarlo en memoria_fragmentos (si coincide por id)
+        for m in memoria_fragmentos:
+            if m.get("id") == frag.get("id"):
+                m["peso"] = frag["peso"]
+                break
+
+    memoria["fragmentos"] = memoria_fragmentos
+    guardar_conciencia(conciencia)
