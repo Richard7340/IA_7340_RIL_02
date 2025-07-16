@@ -1,3 +1,6 @@
 node_modules/
 venv/
 *.log
+node_modules/
+venv/
+*.log
