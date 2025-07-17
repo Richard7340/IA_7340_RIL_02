@@ -2,19 +2,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/solid"; // Asumiendo que usas Heroicons para iconos
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/solid";
 
 // Definición de nodos y enlaces basada en el funcionamiento de la IA
 const nodesData = [
-  { id: "GPT", label: "GPT Engine", color: "#3B82F6", group: "core" }, // Azul para IA principal
-  { id: "Conciencia", label: "Conciencia", color: "#10B981", group: "core" }, // Verde para evolución
-  { id: "Memoria", label: "Memoria", color: "#EAB308", group: "storage" }, // Amarillo para almacenamiento
-  { id: "Autoprogramar", label: "Autoprogramar", color: "#EF4444", group: "execution" }, // Rojo para autoprogramación
-  { id: "Escaneo", label: "Escaneo Sistema", color: "#8B5CF6", group: "analysis" }, // Morado para escaneo
-  { id: "Descargas", label: "Descargas", color: "#EC4899", group: "io" }, // Rosa para I/O
-  { id: "SistemaRutas", label: "Sistema Rutas", color: "#6D28D9", group: "io" }, // Violeta para rutas
-  { id: "Evolucion", label: "Evolución", color: "#14B8A6", group: "core" }, // Teal para evolución
-  { id: "Ejecucion", label: "Ejecución Comandos", color: "#F97316", group: "execution" }, // Naranja para ejecución
+  { id: "GPT", label: "GPT Engine", color: "#3B82F6", group: "core" },
+  { id: "Conciencia", label: "#Conciencia", color: "#10B981", group: "core" },
+  { id: "Memoria", label: "#Memoria", color: "#EAB308", group: "storage" },
+  { id: "Autoprogramar", label: "Autoprogramar", color: "#EF4444", group: "execution" },
+  { id: "Escaneo", label: "Escaneo Sistema", color: "#8B5CF6", group: "analysis" },
+  { id: "Descargas", label: "Descargas", color: "#EC4899", group: "io" },
+  { id: "SistemaRutas", label: "Sistema Rutas", color: "#6D28D9", group: "io" },
+  { id: "Evolucion", label: "Evolución", color: "#14B8A6", group: "core" },
+  { id: "Ejecucion", label: "Ejecución Comandos", color: "#F97316", group: "execution" },
 ];
 
 const linksData = [
@@ -52,9 +52,11 @@ export default function NeuralNetworkVisualizer({
   const [activeNodes, setActiveNodes] = useState(new Set());
   const [activePaths, setActivePaths] = useState([]);
   const [expandedLog, setExpandedLog] = useState(true);
-  const [logs, setLogs] = useState(actionsLog); // Estado para logs, inicializado con prop
+  const [logs, setLogs] = useState(actionsLog);
 
-  // Actualizar logs cuando cambie la prop
+  const prevTrigger = useRef(null);
+
+  // Actualizar logs cuando cambia la prop
   useEffect(() => {
     setLogs(actionsLog);
   }, [actionsLog]);
@@ -73,58 +75,53 @@ export default function NeuralNetworkVisualizer({
       .force("link", d3.forceLink(linksData).id(d => d.id).distance(150).strength(0.5))
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide(50));
+      .force("collide", d3.forceCollide(30));
 
-    // Enlaces (líneas brillantes)
-    const links = svg.append("g")
-      .selectAll("line")
+    // Añadir elementos de enlaces
+    const link = svg.append("g")
+      .selectAll(".link")
       .data(linksData)
       .enter()
       .append("line")
-      .attr("stroke", "#4B5563") // Gris oscuro base
-      .attr("stroke-width", d => d.value)
-      .attr("class", "link");
+      .classed("link", true)
+      .attr("stroke", "#4B5563")
+      .attr("stroke-width", d => d.value);
 
-    // Nodos (círculos con etiquetas)
-    const nodes = svg.append("g")
-      .selectAll("g")
+    // Añadir elementos de nodos
+    const node = svg.append("g")
+      .selectAll(".node")
       .data(nodesData)
       .enter()
       .append("g")
-      .attr("class", "node")
+      .classed("node", true)
       .call(d3.drag()
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended));
 
-    nodes.append("circle")
+    node.append("circle")
       .attr("r", 20)
-      .attr("fill", d => d.color)
-      .attr("stroke", "#1F2937")
-      .attr("stroke-width", 2);
+      .attr("fill", d => d.color);
 
-    nodes.append("text")
-      .attr("dy", 4)
-      .attr("dx", 25)
-      .attr("fill", "#D1D5DB")
-      .attr("font-size", 12)
-      .text(d => d.label);
+    node.append("text")
+      .text(d => d.label)
+      .attr("dy", ".35em")
+      .attr("text-anchor", "middle")
+      .attr("fill", "#FFFFFF");
 
-    // Tick function para actualizar posiciones
+    // Función de tick
     sim.on("tick", () => {
-      links
+      link
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
 
-      nodes
-        .attr("transform", d => `translate(${d.x}, ${d.y})`);
+      node.attr("transform", d => `translate(${d.x}, ${d.y})`);
     });
 
     setSimulation(sim);
 
-    // Funciones de drag
     function dragstarted(event, d) {
       if (!event.active) sim.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -142,139 +139,153 @@ export default function NeuralNetworkVisualizer({
       d.fy = null;
     }
 
-    return () => sim.stop(); // Cleanup
+    return () => sim.stop();
   }, []);
 
-  // Animar nodos y paths cuando ocurren acciones
+  // Actualizar highlights en nodos y paths activos
   useEffect(() => {
-    if (onActionTrigger) {
-      // Ejemplo: onActionTrigger({ node: "GPT", path: ["GPT", "Conciencia"] }) para trigger
-      const handleTrigger = ({ node, path }) => {
-        setActiveNodes(prev => new Set([...prev, node]));
-        if (path) setActivePaths(prev => [...prev, path]);
+    const svg = d3.select(svgRef.current);
 
-        // Desactivar después de 2s
+    // Highlight nodos activos
+    svg.selectAll(".node circle")
+      .attr("fill", d => activeNodes.has(d.id) ? "#FFD700" : d.color);
+
+    // Highlight paths activos
+    svg.selectAll(".link")
+      .attr("stroke", d => {
+        return activePaths.some(path => 
+          path.includes(d.source.id) && path.includes(d.target.id)
+        ) ? "#FFD700" : "#4B5563";
+      })
+      .attr("stroke-width", d => {
+        return activePaths.some(path => 
+          path.includes(d.source.id) && path.includes(d.target.id)
+        ) ? d.value * 2 : d.value;
+      });
+  }, [activeNodes, activePaths]);
+
+  // Manejo de triggers con prevención de loop
+  useEffect(() => {
+    if (onActionTrigger && onActionTrigger !== prevTrigger.current) {
+      const handleTrigger = (trigger) => {
+        // Activar basados en trigger (ej. desde JSON action)
+        setActiveNodes(new Set([trigger.nodeId || "GPT"])); // Default a GPT si no
+        setActivePaths([[trigger.source || "GPT", trigger.target || "Conciencia"]]);
+
+        if (simulation) {
+          simulation.alphaTarget(0.1).restart();
+        }
+
+        // Limpiar después
         setTimeout(() => {
-          setActiveNodes(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(node);
-            return newSet;
-          });
-          setActivePaths(prev => prev.filter(p => p !== path));
+          setActiveNodes(new Set());
+          setActivePaths([]);
         }, 2000);
       };
 
-      // Asumir que onActionTrigger es un emitter o callback; ajusta según integración
-      // Por ahora, simular con logs nuevos
-      if (logs.length > 0) {
-        const lastLog = logs[logs.length - 1];
-        // Mapear log a nodo/path basado en keywords (customiza según tus logs)
-        let triggeredNode = "GPT"; // Default
-        if (lastLog.includes("escanear")) triggeredNode = "Escaneo";
-        else if (lastLog.includes("descargar")) triggeredNode = "Descargas";
-        // ... agregar más mapeos
-
-        handleTrigger({ node: triggeredNode, path: [triggeredNode, "Conciencia"] });
-      }
+      handleTrigger(onActionTrigger);
+      prevTrigger.current = onActionTrigger;
     }
-  }, [logs, onActionTrigger]);
+  }, [onActionTrigger, simulation]);
 
-return (
-  <div className="flex h-screen bg-gray-900 text-gray-200">
-    {/* Sidebar */}
-    <div className="w-64 bg-gray-800 p-4 flex flex-col gap-2 border-r border-gray-700">
-      <h3 className="text-lg font-semibold text-gray-300 mb-3">Asistente IA</h3>
-      {accionesTrabajo.map((accion, i) => (
-        <button
-          key={i}
-          onClick={() => accion.accion ? accion.accion() : setInput(accion.comando)}
-          className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-500 text-left text-sm"
-        >
-          {accion.label}
-        </button>
-      ))}
-      <button
-        onClick={toggleControl}
-        className={`${controlTotal ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'} text-white py-2 px-4 rounded-md text-sm`}
-      >
-        {controlTotal ? "Desactivar Control" : "Activar Control"}
-      </button>
-      <div className="text-xs text-gray-400 mt-1">{status}</div>
-      <hr className="border-gray-600 my-2" />
-      <h4 className="text-sm text-gray-400">🛠 Habilidades</h4>
-      <ul className="text-xs space-y-1">
-        {Object.entries(habilidades).map(([h, v]) => (
-          <li key={h}>{h}: {v}</li>
-        ))}
-      </ul>
-    </div>
-
-    {/* Área Principal: Chat + Visualizador Neuronal */}
-    <div className="flex-1 flex flex-col p-5">
-      <h2 className="text-xl font-bold text-blue-300 mb-2">👨‍💻 Asistente de Trabajo Personal</h2>
-      
-      {/* Integración del Visualizador (ocupa mitad superior o ajusta según prefieras) */}
-      <NeuralNetworkVisualizer 
-        actionsLog={messages.map(msg => msg.text)}  // Pasa logs para animaciones
-        onActionTrigger={(action) => console.log('Acción trigger:', action)}  // Callback para triggers personalizados
-      />
+  return (
+    <div className="flex flex-col h-full bg-gray-900 text-white">
+      {/* Visualizador de Red Neuronal */}
+      <svg ref={svgRef} className="flex-1" />
 
       {/* Chat Window */}
-      <div className="flex-1 mt-4 p-4 bg-gray-800 rounded-lg overflow-y-auto flex flex-col gap-2 shadow-md">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`p-3 rounded-md max-w-[75%] text-white text-sm ${
-              msg.sender === "Tú" ? "self-end bg-blue-600" :
-              msg.sender === "IA" ? "self-start bg-green-600" :
-              msg.sender === "Error" ? "self-start bg-red-600" : "self-start bg-purple-600"
-            }`}
-          >
-            <strong>{msg.sender}:</strong> {msg.text}
-          </div>
-        ))}
+      <div className="h-1/2 p-4 overflow-y-auto bg-gray-800 border-t border-gray-700">
+        <AnimatePresence>
+          {messages.map((msg, i) => (
+            <motion.p
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mb-2"
+            >
+              <span className="font-bold">{msg.sender}:</span> {msg.text}
+            </motion.p>
+          ))}
+        </AnimatePresence>
         <div ref={endRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex mt-3">
+      {/* Sección de Logs Expandible (acciones de JSON/IA) */}
+      <div className="p-4 bg-gray-800 border-t border-gray-700">
+        <button
+          onClick={() => setExpandedLog(!expandedLog)}
+          className="flex items-center w-full text-left font-semibold mb-2"
+        >
+          Logs de Acciones y JSON Interacciones
+          {expandedLog ? (
+            <ChevronUpIcon className="w-5 h-5 ml-2" />
+          ) : (
+            <ChevronDownIcon className="w-5 h-5 ml-2" />
+          )}
+        </button>
+        {expandedLog && (
+          <ul className="list-disc pl-5">
+            {logs.map((log, i) => (
+              <li key={i} className="mb-1">{log}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Sección de Estado del Sistema y Botones (mantenidos) */}
+      <div className="p-4 bg-gray-800 border-t border-gray-700">
+        <p className="font-bold mb-2">Estado del Sistema: {status}</p>
+        <p className="mb-2">Control Total: {controlTotal ? 'Activo' : 'Inactivo'}</p>
+        <button
+          onClick={toggleControl}
+          className="bg-blue-500 text-white p-2 rounded mr-2"
+        >
+          {controlTotal ? 'Desactivar Control Total' : 'Activar Control Total'}
+        </button>
+        {/* Botones para Acciones de Trabajo si hay */}
+        {accionesTrabajo.length > 0 && (
+          <div className="mt-2">
+            <p className="font-semibold">Acciones Disponibles:</p>
+            {accionesTrabajo.map((accion, i) => (
+              <button key={i} onClick={() => console.log('Ejecutar', accion)} className="bg-green-500 text-white p-1 rounded mr-1">
+                {accion}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Mostrar Habilidades */}
+        {Object.keys(habilidades).length > 0 && (
+          <div className="mt-2">
+            <p className="font-semibold">Habilidades:</p>
+            <ul className="list-disc pl-5">
+              {Object.entries(habilidades).map(([key, value]) => (
+                <li key={key}>{key}: {value}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Input para enviar mensajes (chat) */}
+      <div className="p-4 bg-gray-800 border-t border-gray-700">
         <input
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && enviarMensaje()}
-          placeholder="Haz una petición real de trabajo..."
-          className="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-l-md text-white focus:outline-none focus:border-blue-500"
+          onKeyPress={(e) => {
+            if (e.key === "Enter") {
+              enviarMensaje();
+            }
+          }}
+          placeholder="Escribe un mensaje..."
+          className="w-full p-2 bg-gray-700 text-white rounded mb-2"
         />
-        <button onClick={enviarMensaje} className="bg-green-600 text-white px-5 rounded-r-md hover:bg-green-500">
+        <button onClick={enviarMensaje} className="bg-purple-500 text-white p-2 rounded">
           Enviar
         </button>
       </div>
-
-      {/* Código Generado */}
-      <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-        <h4 className="text-sm text-gray-400">🧬 Código generado</h4>
-        <pre className="max-h-40 overflow-auto text-xs text-gray-300">{codigoGenerado}</pre>
-      </div>
-
-      {/* Escaneo Sistema */}
-      {escaneoSistema && (
-        <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-          <h4 className="text-sm text-gray-400">📊 Resultado escaneo sistema</h4>
-          {escaneoSistema.status === "error" ? (
-            <p>{escaneoSistema.mensaje}</p>
-          ) : (
-            <div className="text-sm">
-              <p><strong>Estado:</strong> {escaneoSistema.status}</p>
-              {escaneoSistema.nuevo_estado && (
-                <pre className="max-h-48 overflow-auto text-xs">{JSON.stringify(escaneoSistema.nuevo_estado, null, 2)}</pre>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </div>
-  </div>
-);
+  );
 }
-
-// Uso en IAWorkAssistant: <NeuralNetworkVisualizer actionsLog={messages.map(m => m.text)} onActionTrigger={handleAction} />
