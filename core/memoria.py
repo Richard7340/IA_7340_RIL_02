@@ -1,6 +1,21 @@
-from core.evolucion import cargar_conciencia, guardar_conciencia
+import json  # Añadido para json.load
+from core.evolucion import guardar_conciencia  # Asumiendo que guardar_conciencia está en evolucion; si no, define aquí también
 from datetime import datetime
 import uuid
+import os  # Añadido para os.path.abspath
+
+# Definición de cargar_conciencia con prints para depuración (agregado como solicitado)
+def cargar_conciencia():
+    path = 'data/conciencia_default.json'  # Confirma el path del JSON
+    print(f"Cargando desde: {os.path.abspath(path)}")  # Print del path absoluto
+    try:
+        with open(path, 'r') as file:
+            data = json.load(file)
+            print(f"Contenido cargado: {data}")  # Print del contenido cargado
+            return data
+    except Exception as e:
+        print(f"Error cargando conciencia: {e}")
+        return {}  # Retorna vacío en caso de error
 
 def registrar_evento(tipo, entrada, salida, nivel="info"):
     conciencia = cargar_conciencia()
@@ -20,8 +35,15 @@ def buscar_en_conciencia(mensaje):
     conciencia = cargar_conciencia()
     resultados = []
     for item in conciencia.get("memoria", []):
-        if mensaje.lower() in str(item.get("entrada", "")).lower():
-            resultados.append(item)
+        # Manejar si item es str (para compatibilidad con datos antiguos) o dict
+        if isinstance(item, str):
+            entrada = item
+        else:
+            entrada = item.get("entrada", "")
+        if mensaje.lower() in str(entrada).lower():
+            # Normalizar a dict si es str
+            result_item = {"entrada": entrada} if isinstance(item, str) else item
+            resultados.append(result_item)
     return resultados
 
 def actualizar_peso_fragmentos_memoria(fragmentos, exito=True):
@@ -54,6 +76,7 @@ def limpiar_memoria_por_peso(umbral_minimo=0.2):
     if len(memoria_filtrada) < len(memoria):
         conciencia["memoria"] = memoria_filtrada
         guardar_conciencia(conciencia)
+
 def registrar_en_conciencia(tipo, entrada=None, salida=None, nivel="info"):
     """
     Alias a registrar_evento para compatibilidad con autoevaluacion.py.
