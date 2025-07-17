@@ -18,7 +18,7 @@ from core.ejecutar_comando import ejecutar_comando
 from core.motor_accion import procesar_acciones_desde_gpt
 from core.ejecutor import ejecutar_accion
 from core.autoevaluacion import autoevaluar_y_reintentar
-from core.memoria import buscar_en_conciencia, registrar_evento, registrar_interaccion as registrar_en_conciencia
+from core.memoria import buscar_en_conciencia, registrar_evento, registrar_en_conciencia
 
 from datetime import datetime
 from urllib.parse import urlparse
