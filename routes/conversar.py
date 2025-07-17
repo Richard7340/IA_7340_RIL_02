@@ -32,7 +32,7 @@ conversar_bp = Blueprint("conversar", __name__)
 # Inicializar y clasificar memoria
 # ------------------------------
 asegurar_integridad_memoria()
-marcar_memoria_por_peso(umbral_minimo=0.2)
+marcar_memoria_por_peso(peso=0.2)
 
 # ------------------------------
 # Helpers para ejecución segura
@@ -109,8 +109,10 @@ def conversar():
 
     conciencia = cargar_conciencia()
     control_total = conciencia.get("control_total", False)
+    print(f"Control total en /conversar: {control_total}")  # Añadido para depuración
     respuesta_ia = ""
     acciones_realizadas = []
+    activated_nodes = []  # Para integración con frontend (activación de nodos en la red neuronal)
 
     # 1️⃣ Recuperar fragmentos activos de memoria y embeddings
     literal = buscar_en_conciencia(mensaje_usuario) or []
@@ -125,6 +127,12 @@ def conversar():
     elif isinstance(embedding, dict):
         todos.append(embedding)
     fragmentos_activos = [f for f in todos if f.get("estado", "activa") == "activa"]
+
+    # Añadir nodos activados basados en búsquedas (ej. si se buscó en "Conciencia" o "Memoria")
+    if literal:
+        activated_nodes.append("Conciencia")
+    if embedding:
+        activated_nodes.append("Memoria")
 
     # 2️⃣ Filtrado semántico adicional
     fragmentos_filtrados = filtrar_fragmentos_memoria(fragmentos_activos, mensaje_usuario)
@@ -150,14 +158,17 @@ def conversar():
                 cambios = actualizar_memoria_sistema(estado)
                 respuesta_ia = "✅ Cambios detectados." if cambios else "🟢 Sin cambios detectados."
                 registrar_evento("escanear_sistema", mensaje_usuario, respuesta_ia)
+                activated_nodes.append("Escaneo")  # Activar nodo relacionado
             elif "listar archivos" in mu:
                 files = listar_archivos_en_directorio("C:/")
                 respuesta_ia = "📂 " + ", ".join(files[:20])
                 registrar_evento("listar_archivos", mensaje_usuario, files[:20])
+                activated_nodes.append("SistemaRutas")  # Activar nodo relacionado
             elif "leer conciencia" in mu:
                 jsonc = leer_conciencia_json()
                 respuesta_ia = f"🧠 Conciencia:\n```json\n{jsonc}\n```"
                 registrar_evento("leer_conciencia", mensaje_usuario, jsonc)
+                activated_nodes.append("Conciencia")  # Activar nodo relacionado
             elif isinstance(resultado, dict) and resultado.get("acciones"):
                 for acc in resultado["acciones"]:
                     res = ejecutar_accion(acc)
@@ -166,6 +177,7 @@ def conversar():
                     if not res.get("exito"):
                         reintentos = autoevaluar_y_reintentar(acc, res, mensaje_usuario)
                         acciones_realizadas.extend(reintentos)
+                    activated_nodes.append("Ejecucion")  # Activar nodo para ejecuciones
                 # Ajuste de peso evolutivo
                 exito_global = all(r["resultado"].get("exito", False) for r in acciones_realizadas)
                 actualizar_peso_fragmentos_memoria(fragmentos_activos, exito=exito_global)
@@ -174,6 +186,8 @@ def conversar():
             else:
                 respuesta_ia = contenido
                 acciones_realizadas = evaluar_respuesta_para_ejecucion(contenido, control_total)
+                if acciones_realizadas:
+                    activated_nodes.append("Descargas")  # Si hay descargas o comandos
         else:
             respuesta_ia = f"⚠️ Control total desactivado.\n{contenido}"
             registrar_evento("control_total_desactivado", mensaje_usuario, contenido, nivel="warning")
@@ -189,11 +203,13 @@ def conversar():
             evolucionar_conciencia(mensaje_usuario, respuesta_ia)
             respuesta_ia += "\n🔄 Evolución aplicada."
             registrar_evento("evolucion_aplicada", mensaje_usuario, respuesta_ia)
+            activated_nodes.append("Evolucion")  # Activar nodo para evolución
     except Exception as err:
         registrar_evento("error_registro", mensaje_usuario, str(err), nivel="error")
         respuesta_ia += "\n⚠️ No se pudo guardar conciencia."
 
     return jsonify({
         "respuesta": respuesta_ia,
-        "acciones_realizadas": acciones_realizadas
+        "acciones_realizadas": acciones_realizadas,
+        "activated_nodes": list(set(activated_nodes))  # Lista única de nodos activados para frontend
     }), 200
