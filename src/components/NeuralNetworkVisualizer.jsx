@@ -29,8 +29,25 @@ const linksData = [
   { source: "Escaneo", target: "Memoria", value: 1 },
 ];
 
-export default function NeuralNetworkVisualizer({ actionsLog = [], onActionTrigger }) {
+export default function NeuralNetworkVisualizer({
+  actionsLog = [],
+  onActionTrigger,
+  accionesTrabajo = [],
+  setInput = () => {},
+  toggleControl = () => {},
+  controlTotal = false,
+  status = "",
+  habilidades = {},
+  messages = [],
+  messagesEndRef,
+  input = "",
+  enviarMensaje = () => {},
+  codigoGenerado = "",
+  escaneoSistema = null,
+}) {
   const svgRef = useRef(null);
+  const internalEndRef = useRef(null);
+  const endRef = messagesEndRef || internalEndRef;
   const [simulation, setSimulation] = useState(null);
   const [activeNodes, setActiveNodes] = useState(new Set());
   const [activePaths, setActivePaths] = useState([]);
@@ -216,7 +233,7 @@ return (
             <strong>{msg.sender}:</strong> {msg.text}
           </div>
         ))}
-        <div ref={messagesEndRef} />
+        <div ref={endRef} />
       </div>
 
       {/* Input */}
