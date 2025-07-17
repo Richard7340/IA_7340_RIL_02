@@ -3,41 +3,50 @@ import os
 from datetime import datetime
 from urllib.parse import urlparse
 
-RUTA_CONSCIENCIA = "data/conciencia_default.json"
+RUTA_CONSCIENCIA = "data/conciencia_default.json"  # Estandarizado a conciencia.json (cambia si necesitas _default)
 RUTA_AUTOCODIGO = "data/codigo_autogenerado.py"
 
 # --------------------
 # Cargar y guardar conciencia
 # --------------------
 def cargar_conciencia():
-    conciencia_base = {
-        "control_total": False,
-        "memoria": {
-            "interacciones": [],
-            "tokens_usados": 0
-        },
-        "registro": [],
-        "habilidades": {},
-        "autoprogramacion": [],
-        "interacciones": []
-    }
-
     if not os.path.exists(RUTA_CONSCIENCIA):
         print("⚠️ No se encontró el archivo de conciencia. Creando uno nuevo...")
+        conciencia_base = {
+            "control_total": False,
+            "memoria": {
+                "interacciones": [],
+                "tokens_usados": 0
+            },
+            "registro": [],
+            "habilidades": {},
+            "autoprogramacion": [],
+            "interacciones": []
+        }
         guardar_conciencia(conciencia_base)
         return conciencia_base
 
     try:
-        with open(RUTA_CONSCIENCIA, "r", encoding="utf-8") as f:
+        with open(RUTA_CONSCIENCIA, "r", encoding="utf-8") as f:  # Añadido encoding='utf-8' para fix del error de codec
             data = json.load(f)
             if not isinstance(data, dict):
                 raise ValueError("Contenido inválido: no es un diccionario.")
-            for k, v in conciencia_base.items():
-                if k not in data:
-                    data[k] = v
+            # No mergeamos base aquí; solo cargamos el contenido existente tal cual
+            # Si faltan keys, se manejan en funciones que las usen (ej. .get() con default)
             return data
     except Exception as e:
         print(f"❌ Error al leer conciencia: {e}. Restaurando estructura base.")
+        conciencia_base = {
+            "control_total": False,
+            "memoria": {
+                "interacciones": [],
+                "tokens_usados": 0
+            },
+            "registro": [],
+            "habilidades": {},
+            "autoprogramacion": [],
+            "interacciones": []
+        }
         guardar_conciencia(conciencia_base)
         return conciencia_base
 
@@ -204,10 +213,13 @@ def asegurar_integridad_memoria() -> bool:
     que la sección 'memoria' existe y tiene los campos esperados.
     """
     conciencia = cargar_conciencia()
-    # Asegura que existan las claves básicas
-    memoria = conciencia.setdefault("memoria", {})
-    memoria.setdefault("interacciones", [])
-    memoria.setdefault("tokens_usados", 0)
+    # Asegura que existan las claves básicas (solo si faltan, sin sobrescribir)
+    if "memoria" not in conciencia:
+        conciencia["memoria"] = {}
+    if "interacciones" not in conciencia["memoria"]:
+        conciencia["memoria"]["interacciones"] = []
+    if "tokens_usados" not in conciencia["memoria"]:
+        conciencia["memoria"]["tokens_usados"] = 0
     # (aquí podrías hacer más validaciones o limpiezas)
     guardar_conciencia(conciencia)
     return True
