@@ -115,7 +115,7 @@ def registrar_autoprogramacion(entrada, salida):
 # --------------------
 def evolucionar_conciencia(entrada, salida):
     # Import dinámico para romper ciclo
-    from core.memoria import registrar_evento, registrar_interaccion
+    from core.memoria import registrar_evento, registrar_en_conciencia
 
     conciencia = cargar_conciencia()
     conciencia.setdefault("memoria", {}).setdefault("interacciones", [])
@@ -146,7 +146,7 @@ def evolucionar_conciencia(entrada, salida):
     conciencia["memoria"]["tokens_usados"] += tokens
 
     # Registrar la interacción en memoria
-    registrar_interaccion("evolucion_interaccion", entrada, salida)
+    registrar_en_conciencia("evolucion_interaccion", entrada, salida)
     guardar_conciencia(conciencia)
 
 
