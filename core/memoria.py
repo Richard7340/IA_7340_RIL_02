@@ -2,19 +2,6 @@ from core.evolucion import cargar_conciencia, guardar_conciencia
 from datetime import datetime
 import uuid
 
-def registrar_en_conciencia(tipo, entrada, salida):
-    conciencia = cargar_conciencia()
-    nueva_entrada = {
-        "id": str(uuid.uuid4()),
-        "tipo": tipo,
-        "entrada": entrada,
-        "salida": salida,
-        "timestamp": datetime.utcnow().isoformat(),
-        "peso_utilidad": 1.0
-    }
-    conciencia.setdefault("memoria", []).append(nueva_entrada)
-    guardar_conciencia(conciencia)
-
 def registrar_evento(tipo, entrada, salida, nivel="info"):
     conciencia = cargar_conciencia()
     evento = {
