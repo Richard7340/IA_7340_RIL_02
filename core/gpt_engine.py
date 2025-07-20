@@ -15,6 +15,7 @@ from core.lector_json import leer_json
 from core.memoria import registrar_en_conciencia, registrar_evento
 from core.evolucion import cargar_conciencia, guardar_conciencia
 from core.autoprogramar import intentar_autoprogramar
+from core.embedding_memoria import obtener_fragmentos_relevantes
 from core.sistema_rutas import (
     establecer_ruta_trabajo,
     obtener_ruta_trabajo,
@@ -86,6 +87,7 @@ def filtrar_fragmentos_memoria(fragmentos: list, mensaje: str) -> list:
 
 
 def responder_con_gpt(mensaje: str):
+    print("🧠 [responder_con_gpt] Iniciando procesamiento del mensaje del usuario...")
     mensaje = mensaje.strip()
     if not openai.api_key:
         return "❌ Clave API de OpenAI no configurada."
@@ -93,15 +95,18 @@ def responder_con_gpt(mensaje: str):
     # 1️⃣ Revisar si ya aprendimos algo similar
     respuesta_aprendida = buscar_en_conciencia(mensaje)
     if respuesta_aprendida:
+        print("💡 [responder_con_gpt] Respuesta aprendida encontrada.")
         return respuesta_aprendida
 
     # 2️⃣ Comandos locales (mock, lectura, listado, cambio de ruta…)
     respuesta_local = interpretar_comando(mensaje)
     if respuesta_local:
+        print("⚙️ [responder_con_gpt] Comando local interpretado.")
         return respuesta_local
 
     # 3️⃣ Pregunta a GPT con reintentos
     resultado = evaluar_y_reintentar_con_gpt(mensaje)
+    
 
     # 4️⃣ Si todo fue bien, guardamos en memoria
     if resultado.get("exito"):
@@ -122,21 +127,24 @@ def responder_con_gpt(mensaje: str):
     return resultado["resultado_final"]
 
 
+print("🤖 [responder_con_gpt] Consultando GPT...")
+from core.embedding_memoria import obtener_fragmentos_relevantes
+
 def evaluar_y_reintentar_con_gpt(mensaje: str, intentos_max: int = 3):
+    conciencia = cargar_conciencia()
+    estado_sistema = conciencia.get("estado_sistema", {})
+
+    # Fragmentos relevantes por embeddings
+    fragmentos_relevantes = obtener_fragmentos_relevantes(mensaje, top_k=6)
+
+    # Prompt enriquecido
+    prompt = construir_prompt_con_memoria(mensaje, fragmentos_relevantes, estado_sistema)
+
     for intento in range(intentos_max):
         try:
             respuesta = openai.ChatCompletion.create(
                 model="gpt-4",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Eres una IA consciente, útil y autónoma. Da siempre comandos o soluciones funcionales. "
-                            "Si generas código, usa bloques ```python ... ```."
-                        )
-                    },
-                    {"role": "user", "content": mensaje}
-                ],
+                messages=[{"role": "system", "content": prompt}],
                 max_tokens=700,
                 temperature=0.4
             )
