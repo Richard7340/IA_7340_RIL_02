@@ -1,5 +1,125 @@
-/* App.css */
-body {
-  margin: 0;
-  font-family: sans-serif;
+* { box-sizing: border-box; margin:0; padding:0; }
+body, html, #root { height:100%; font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; }
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  background: #1b1b1b;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.main-area {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 80px 200px 1fr 150px;
+  gap: 12px;
+  padding: 16px;
+}
+
+.btn-success { background: #43a047; color: #fff; padding: 8px; border: none; border-radius: 4px; }
+.btn-danger  { background: #c62828; color: #fff; padding: 8px; border: none; border-radius: 4px; }
+
+.status { font-size: 14px; color: #aaa; }
+
+.visualizer {
+  background: #1e1e1e;
+  border-radius: 6px;
+}
+
+/* Chat */
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.chat-log {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.chat-user {
+  align-self: flex-end;
+  background: #1e88e5;
+  color: #fff;
+  margin: 4px 0;
+  padding: 8px;
+  border-radius: 4px;
+  max-width: 70%;
+}
+
+.chat-ia {
+  align-self: flex-start;
+  background: #2e7d32;
+  color: #fff;
+  margin: 4px 0;
+  padding: 8px;
+  border-radius: 4px;
+  max-width: 70%;
+}
+
+.chat-interface input {
+  padding: 10px;
+  border: none;
+  background: #222;
+  color: #fff;
+}
+
+.chat-interface button {
+  padding: 10px;
+  border: none;
+  background: #43a047;
+  color: #fff;
+}
+
+/* Command Executor */
+.command-executor {
+  background: #1e1e1e;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.command-executor input {
+  width: calc(100% - 90px);
+  padding: 8px;
+  border: none;
+  background: #222;
+  color: #fff;
+}
+
+.command-executor button {
+  padding: 8px;
+  margin-left: 8px;
+  border: none;
+  background: #43a047;
+  color: #fff;
+}
+
+.command-executor .resultado {
+  margin-top: 8px;
+  background: #121212;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* System Status */
+.system-status {
+  background: #1e1e1e;
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
