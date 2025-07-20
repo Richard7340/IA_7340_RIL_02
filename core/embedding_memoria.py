@@ -98,3 +98,26 @@ def similitud_coseno(v1, v2):
         return dot(v1, v2) / (norm(v1) * norm(v2))
     except Exception:
         return 0.0
+# -------------------------------
+# Obtener fragmentos más relevantes por similitud
+# -------------------------------
+def obtener_fragmentos_relevantes(mensaje: str, top_k: int = 5):
+    consulta_emb = generar_embedding(mensaje)
+    if not consulta_emb:
+        return []
+
+    conciencia = cargar_conciencia()
+    interacciones = conciencia.get("interacciones", [])
+    fragmentos_similares = []
+
+    for item in interacciones:
+        emb = item.get("embedding")
+        if not emb:
+            continue
+        sim = similitud_coseno(consulta_emb, emb)
+        fragmentos_similares.append((sim, item))
+
+    fragmentos_similares.sort(key=lambda x: x[0], reverse=True)
+    fragmentos_top = [item for _, item in fragmentos_similares[:top_k]]
+
+    return fragmentos_top
