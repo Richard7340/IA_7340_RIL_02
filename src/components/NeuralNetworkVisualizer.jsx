@@ -1,5 +1,5 @@
 // src/components/NeuralNetworkVisualizer.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/solid";
@@ -33,13 +33,13 @@ export default function NeuralNetworkVisualizer({
   actionsLog = [],
   onActionTrigger,
   accionesTrabajo = [],
-  setInput = () => {},
+  setInput: propSetInput = () => {},
   toggleControl = () => {},
   controlTotal = false,
   status = "",
   habilidades = {},
   messages = [],
-  messagesEndRef,
+  messagesEndRef: propMessagesEndRef,
   input = "",
   enviarMensaje = () => {},
   codigoGenerado = "",
@@ -47,7 +47,7 @@ export default function NeuralNetworkVisualizer({
 }) {
   const svgRef = useRef(null);
   const internalEndRef = useRef(null);
-  const endRef = messagesEndRef || internalEndRef;
+  const endRef = propMessagesEndRef || internalEndRef;
   const [simulation, setSimulation] = useState(null);
   const [activeNodes, setActiveNodes] = useState(new Set());
   const [activePaths, setActivePaths] = useState([]);
@@ -164,29 +164,31 @@ export default function NeuralNetworkVisualizer({
       });
   }, [activeNodes, activePaths]);
 
-  // Manejo de triggers con prevención de loop
+  // Manejo de triggers con prevención de loop (usando useCallback para estabilizar handler)
+  const handleTrigger = useCallback((trigger) => {
+    if (!trigger) return;
+
+    // Activar basados en trigger (ej. desde JSON action)
+    setActiveNodes(new Set([trigger.nodeId || "GPT"])); // Default a GPT si no
+    setActivePaths([[trigger.source || "GPT", trigger.target || "Conciencia"]]);
+
+    if (simulation) {
+      simulation.alphaTarget(0.1).restart();
+    }
+
+    // Limpiar después
+    setTimeout(() => {
+      setActiveNodes(new Set());
+      setActivePaths([]);
+    }, 2000);
+  }, [simulation]);
+
   useEffect(() => {
     if (onActionTrigger && onActionTrigger !== prevTrigger.current) {
-      const handleTrigger = (trigger) => {
-        // Activar basados en trigger (ej. desde JSON action)
-        setActiveNodes(new Set([trigger.nodeId || "GPT"])); // Default a GPT si no
-        setActivePaths([[trigger.source || "GPT", trigger.target || "Conciencia"]]);
-
-        if (simulation) {
-          simulation.alphaTarget(0.1).restart();
-        }
-
-        // Limpiar después
-        setTimeout(() => {
-          setActiveNodes(new Set());
-          setActivePaths([]);
-        }, 2000);
-      };
-
       handleTrigger(onActionTrigger);
       prevTrigger.current = onActionTrigger;
     }
-  }, [onActionTrigger, simulation]);
+  }, [onActionTrigger, handleTrigger]);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -273,7 +275,7 @@ export default function NeuralNetworkVisualizer({
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => propSetInput(e.target.value)}
           onKeyPress={(e) => {
             if (e.key === "Enter") {
               enviarMensaje();
