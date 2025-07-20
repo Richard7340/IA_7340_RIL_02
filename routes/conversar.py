@@ -37,7 +37,6 @@ marcar_memoria_por_peso(peso=0.2)
 # ------------------------------
 # Helpers para ejecución segura
 # ------------------------------
-
 def extraer_comandos(texto):
     comandos = []
     for linea in texto.splitlines():
@@ -46,10 +45,8 @@ def extraer_comandos(texto):
             comandos.append(cmd)
     return comandos
 
-
 def extraer_urls(texto):
     return re.findall(r"https?://[^\s\"'<>]+", texto)
-
 
 def limpiar_url(url: str) -> str:
     url = re.sub(r'\\+', '', url)
@@ -57,7 +54,6 @@ def limpiar_url(url: str) -> str:
     if not urlparse(url).scheme:
         raise ValueError(f"❌ URL inválida o sin esquema: {url}")
     return url
-
 
 def evaluar_respuesta_para_ejecucion(respuesta_gpt, control_total):
     acciones = []
@@ -94,6 +90,30 @@ def evaluar_respuesta_para_ejecucion(respuesta_gpt, control_total):
 
     return acciones
 
+# ------------------------------
+# Nuevos endpoints para control total (para evitar 404)
+# ------------------------------
+@conversar_bp.route("/estado-control-total", methods=["GET"])
+def estado_control_total():
+    conciencia = cargar_conciencia()
+    print(f"GET /estado-control-total: {conciencia.get('control_total', False)}")  # Debug
+    return jsonify({"control_total": conciencia.get("control_total", False)}), 200
+
+@conversar_bp.route("/activar-control-total", methods=["POST"])
+def activar_control_total():
+    conciencia = cargar_conciencia()
+    conciencia["control_total"] = True
+    guardar_conciencia(conciencia)
+    print("POST /activar-control-total: Activado")  # Debug
+    return jsonify({"control_total": True}), 200
+
+@conversar_bp.route("/desactivar-control-total", methods=["POST"])
+def desactivar_control_total():
+    conciencia = cargar_conciencia()
+    conciencia["control_total"] = False
+    guardar_conciencia(conciencia)
+    print("POST /desactivar-control-total: Desactivado")  # Debug
+    return jsonify({"control_total": False}), 200
 
 # ------------------------------
 # Endpoint principal: /conversar
@@ -164,7 +184,7 @@ def conversar():
                 respuesta_ia = "📂 " + ", ".join(files[:20])
                 registrar_evento("listar_archivos", mensaje_usuario, files[:20])
                 activated_nodes.append("SistemaRutas")  # Activar nodo relacionado
-            elif "leer conciencia" in mu:
+            elif "leer conciencia" in mu or "leerjson" in mu:  # Ajuste para compatibilidad con frontend
                 jsonc = leer_conciencia_json()
                 respuesta_ia = f"🧠 Conciencia:\n```json\n{jsonc}\n```"
                 registrar_evento("leer_conciencia", mensaje_usuario, jsonc)
